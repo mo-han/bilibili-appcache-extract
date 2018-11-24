@@ -8,11 +8,10 @@
 import json
 import os
 import sys
+import shutil
 from glob import glob
-from time import sleep
 
 import bs4
-import lxml
 import requests
 
 # DEPRECATED:
@@ -39,7 +38,7 @@ def ffmpeg_concat(input_list: list, ouput_path: str):
             lf.write("file '{}'{}".format(i, os.linesep).encode())
     os.system(
         'ffmpeg -n -hide_banner -loglevel +level -f concat -safe 0 -i "{}" -c copy "{}"'
-        .format(list_path, ouput_path))
+            .format(list_path, ouput_path))
     os.remove(list_path)
 
 
@@ -70,31 +69,64 @@ def get_author_kanbilibili(id):
     return get_info_kanbilibili(id)['author']
 
 
-_, base = os.path.split(sys.argv[1])
-if base == '*':
-    args = glob(sys.argv[1])
-else:
-    args = sys.argv[1:]
-for d in args:
-    if not os.path.isdir(d):
-        continue
-    print(d)
-    work_dir, id = os.path.split(os.path.realpath(d))
-    author = get_author_kanbilibili(id)
-    p_l = os.listdir(d)
-    for p in p_l:
-        e = json.load(open(os.path.join(d, p, 'entry.json'), encoding='utf8'))
-        blv_list = glob(os.path.join(d, p, e['type_tag'], '*.blv'))
-        il = []
-        for i in blv_list:
-            il += [i]
-        title = e['title']
-        title = validate_path(title)
-        o = os.path.join(work_dir, '{} [av{}][{}]'.format(title, id, author))
-        if len(p_l) >= 2:
-            ptitle = e['page_data']['part']
-            ptitle = validate_path(ptitle)
-            o += '{}-{}.mp4'.format(p, ptitle)
+class VideoFolder:
+    def __init__(self, cached_folder):
+        self.folder = cached_folder
+        self.work_dir, self.id = os.path.split(os.path.realpath(cached_folder))
+        self.part_list = os.listdir(cached_folder)
+        self.part_sum = len(self.part_list)
+        self.part = None
+        self.entry = None
+
+    def handle_part(self):
+        print('====== {}'.format(self.folder))
+        for part in self.part_list:
+            self.part = part
+            print('------ {}'.format(part))
+            try:
+                self.entry = entry = json.load(open(os.path.join(self.folder, part, 'entry.json'), encoding='utf8'))
+            except FileNotFoundError:
+                os.remove(os.path.join(folder, part))
+                continue
+            if 'page_data' in entry:
+                self.handle_vupload()
+            elif 'ep' in entry:
+                self.handle_bangumi()
+
+    def handle_vupload(self):
+        title = validate_path(self.entry['title'])
+        blv_list = glob(os.path.join(self.folder, self.part, self.entry['type_tag'], '*.blv'))
+        author = get_author_kanbilibili(self.id)
+        output = os.path.join(self.work_dir, '{} [av{}][{}]'.format(title, self.id, author))
+        if len(self.part_list) >= 2:
+            part_title = validate_path(self.entry['page_data']['part'])
+            output += '{}-{}.mp4'.format(self.part, part_title)
         else:
-            o += '.mp4'
-        ffmpeg_concat(il, o)
+            output += '.mp4'
+        ffmpeg_concat(blv_list, output)
+
+    def handle_bangumi(self):
+        title = validate_path(self.entry['title'])
+        blv_list = glob(os.path.join(self.folder, self.part, self.entry['type_tag'], '*.blv'))
+        part_title = validate_path(self.entry['ep']['index_title'])
+        av_id = self.entry['ep']['av_id']
+        ep_num = self.entry['ep']['index']
+        output_dir = os.path.join(self.work_dir, '{} [av{}][{}]'.format(title, av_id, self.id))
+        if not os.path.isdir(output_dir):
+            os.mkdir(output_dir)
+        output = os.path.join(output_dir, '{}. {}.mp4'.format(str(ep_num).zfill(len(str(self.part_sum))), part_title))
+        ffmpeg_concat(blv_list, output)
+        shutil.copy2(os.path.join(self.folder, self.part, 'danmaku.xml'), output[:-3] + 'xml')
+
+
+if __name__ == '__main__':
+    # _, base = os.path.split(sys.argv[1])
+    if sys.argv[1][-1] == '*':
+        args = glob(sys.argv[1])
+    else:
+        args = sys.argv[1:]
+    for folder in args:
+        if not os.path.isdir(folder):
+            continue
+        vf = VideoFolder(folder)
+        vf.handle_part()
