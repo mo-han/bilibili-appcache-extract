@@ -7,9 +7,10 @@
 
 import json
 import os
-import sys
 import shutil
+import sys
 from glob import glob
+from json import JSONDecodeError
 
 import bs4
 import requests
@@ -66,7 +67,10 @@ def get_info_kanbilibili(id):
 
 
 def get_author_kanbilibili(id):
-    return get_info_kanbilibili(id)['author']
+    try:
+        return get_info_kanbilibili(id)['author']
+    except JSONDecodeError:
+        return 'ERR_KANBILI'
 
 
 class VideoFolder:
