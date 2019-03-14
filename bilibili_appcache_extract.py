@@ -20,7 +20,7 @@ import requests
 # Depends on package `bilibili_video_api` which is derived (2to3) from:
 # https://github.com/Vespa314/bilibili-api/tree/master/bilibili-video
 
-__version__ = 0.4
+__version__ = '0.4'
 
 ILLEGAL_CHARS = ['\\', '/', ':', '*', '"', '<', '>', '|', '?']
 
@@ -41,7 +41,7 @@ def ffmpeg_concat(input_list: list, ouput_path: str):
             lf.write("file '{}'{}".format(i, os.linesep).encode())
     os.system(
         # 'ffmpeg -n -hide_banner -loglevel +level -f concat -safe 0 -i "{}" -c copy "{}"'
-        'ffmpeg -n -hide_banner -f concat -safe 0 -i "{}" -c copy "{}"'
+        'ffmpeg -n -hide_banner -loglevel warning -f concat -safe 0 -i "{}" -c copy "{}"'
             .format(list_path, ouput_path))
     os.remove(list_path)
 
