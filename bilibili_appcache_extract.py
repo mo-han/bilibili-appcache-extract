@@ -33,6 +33,16 @@ def validate_path(s: str):
     return sp
 
 
+def print_noerr(s: str):
+    for char in s:
+        try:
+            print(char, end='')
+        except UnicodeEncodeError:
+            pass
+    else:
+        print('\n')
+
+
 def ffmpeg_concat(input_list: list, ouput_path: str):
     work_dir, _ = os.path.split(os.path.realpath(ouput_path))
     list_path = os.path.join(work_dir, '###-ffmpeg-concat-list-temp.txt')
@@ -86,10 +96,10 @@ class VideoFolder:
         self.entry = None
 
     def handle_part(self):
-        print('====== {}'.format(self.folder))
+        print('+ {}'.format(self.folder))
         for part in self.part_list:
             self.part = part
-            print('------ {}'.format(part))
+            print('  + {}'.format(part), end=': ')
             try:
                 self.entry = entry = json.load(open(os.path.join(self.folder, part, 'entry.json'), encoding='utf8'))
             except FileNotFoundError:
@@ -110,6 +120,7 @@ class VideoFolder:
             output += '{}-{}.mp4'.format(self.part, part_title)
         else:
             output += '.mp4'
+        print_noerr(output)
         ffmpeg_concat(blv_list, output)
 
     def handle_bangumi(self):
@@ -122,6 +133,7 @@ class VideoFolder:
         if not os.path.isdir(output_dir):
             os.mkdir(output_dir)
         output = os.path.join(output_dir, '{}. {}.mp4'.format(str(ep_num).zfill(len(str(self.part_sum))), part_title))
+        print_noerr(output)
         ffmpeg_concat(blv_list, output)
         shutil.copy2(os.path.join(self.folder, self.part, 'danmaku.xml'), output[:-3] + 'xml')
 
