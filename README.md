@@ -1,9 +1,11 @@
 # bilibili-appcache-extract
 
 Project has been moved to and become part of https://github.com/mo-han/mo-han-toolbox.
+
 项目移动并入 https://github.com/mo-han/mo-han-toolbox.
 
 New implementation use PhantomJS to get some of the infomation from online website.
+
 新的实现依赖 PhantomJS 从网站上获取某些信息。
 
 ---
